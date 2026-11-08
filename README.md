@@ -37,17 +37,24 @@ For all supported endpoints, visit [localhost:8080](http://localhost:8080/).
 
 ### Release
 
-To publish a new release, simply create & push a new Git Tag.
+Releases are automated and triggered by a label:
 
-NOTE: Tags should follow the included CRS version. Use the build number to signify changes to the images with the same CRS number, e.g. `v4.3.0-0` -> `v4.3.0-1`.
+1. [Renovate](https://docs.renovatebot.com/) bumps the pinned CRS version in the `Containerfile` and opens a PR.
+2. A maintainer adds the label `Publish container image` to that PR
+   (the label must be created once in the repo settings by a maintainer).
+3. When the PR is merged, the auto-release workflow determines the CRS version from the `Containerfile` and creates a lightweight Git tag `v<CRS-VERSION>` (e.g. `v4.30.0`).
+   If an image build repeats on the same CRS version, it creates `v<CRS-VERSION>-<N>` instead (e.g. `v4.30.0-1`).
+4. It then triggers the [Build & Push workflow](.github/workflows/push.yml), publishing `ghcr.io/vshn/modsecurity-docker:<tag>` and `ghcr.io/vshn/modsecurity-docker:latest` (always the newest release).
 
-One-Liner to create a Tag:
+Tag names must stay unique per CRS version: the first build of a CRS version uses the bare `v<CRS-VERSION>` tag, and repeat builds append an incrementing suffix since the bare tag already exists.
+
+If GitHub Actions is unavailable, create and push the tag manually. Tags must be lightweight (no `git tag -s -m ...`, which creates annotated tags some tooling treats differently). The one-liner extracts the CRS version from the first `FROM` line in the `Containerfile` and appends `-1` — `-1` and not `-0`, because the bare `v<CRS-VERSION>` tag may already exist and the suffix numbering starts at 1 to avoid clashing with it:
 
 ```sh
-tag="v$(grep '^FROM ' Containerfile| cut -d':' -f2 | cut -d'-' -f1)-0"; git tag -s "$tag" -m "$tag"
-```
+tag="v$(grep -m1 '^FROM ' Containerfile | cut -d':' -f2 | cut -d'-' -f1)-1"; git tag "$tag"
 
-Don't forget to `git push --tags` afterwards!
+git push origin "$tag"
+```
 
 ## Configuration
 

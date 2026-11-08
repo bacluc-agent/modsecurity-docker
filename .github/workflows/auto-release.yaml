@@ -1,0 +1,65 @@
+name: Auto-release
+on:
+  pull_request:
+    types:
+      - synchronize
+      - labeled
+      - unlabeled
+      - closed
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: auto-release
+  cancel-in-progress: false
+
+jobs:
+  create-release-tag:
+    runs-on: ubuntu-latest
+    if: >-
+      github.repository == 'vshn/modsecurity-docker' &&
+      github.event.action == 'closed' &&
+      github.event.pull_request.merged &&
+      contains(github.event.pull_request.labels.*.name, 'Publish container image')
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+
+      - name: Create release tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+        run: |
+          set -euo pipefail
+          version="$(scripts/upstream-version.sh)"
+          matches="$(git ls-remote --tags --refs origin "refs/tags/v${version}*" \
+            | awk '{print $1 "\t" $2}')"
+
+          # Idempotent: if this merge commit is already tagged, do nothing.
+          # awk exits 0 by default, so the sentinel print keeps the outcome explicit.
+          tagged="$(printf '%s\n' "$matches" \
+            | awk -F'\t' -v s="$MERGE_SHA" '$1 == s {print "yes"; exit}')"
+          if [ -n "$tagged" ]; then
+            echo "Merge commit ${MERGE_SHA} is already tagged for CRS v${version}; nothing to do"
+            exit 0
+          fi
+
+          tag="v${version}"
+          if printf '%s\n' "$matches" | cut -f2 | grep -qx "refs/tags/${tag}"; then
+            # Base tag already exists (rebuild of same CRS version): increment suffix
+            next="$(printf '%s\n' "$matches" \
+              | awk -F'\t' -v p="refs/tags/v${version}-" \
+                  '$2 ~ "^" p "[0-9]+$" { n = substr($2, length(p) + 1) + 0; if (n > m) m = n }
+                   END { if (m == "") print 1; else print m + 1 }')"
+            tag="${tag}-${next}"
+          fi
+
+          echo "Creating tag ${tag} at ${MERGE_SHA}"
+          gh api -X POST "repos/${GITHUB_REPOSITORY}/git/refs" \
+            -f "ref=refs/tags/${tag}" -f "sha=${MERGE_SHA}"
+
+          # REST-created tags don't fire `on: push` events; dispatch the build workflow
+          gh workflow run push.yml --ref "${tag}"

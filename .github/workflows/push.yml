@@ -1,5 +1,6 @@
 name: Build & Push Container Image
 on:
+  workflow_dispatch: {}
   push:
     branches:
       - master
