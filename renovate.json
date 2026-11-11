@@ -15,6 +15,22 @@
       "matchUpdateTypes": ["minor"],
       "reviewers": ["team:nunki"],
       "automerge": false
+    },
+    {
+      "matchUpdateTypes": ["patch"],
+      "labels": ["renovate", "dependency", "bump:patch"]
+    },
+    {
+      "matchUpdateTypes": ["minor"],
+      "labels": ["renovate", "dependency", "bump:minor"]
+    },
+    {
+      "matchUpdateTypes": ["major"],
+      "labels": ["renovate", "dependency", "bump:major"]
+    },
+    {
+      "matchUpdateTypes": ["digest"],
+      "labels": ["renovate", "dependency"]
     }
   ]
 }

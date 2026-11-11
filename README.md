@@ -37,23 +37,24 @@ For all supported endpoints, visit [localhost:8080](http://localhost:8080/).
 
 ### Release
 
-Releases are automated and triggered by a label:
+Releases are automated and triggered by PR labels via [projectsyn/pr-label-tag-action](https://github.com/ProjectSyn/pr-label-tag-action):
 
-1. [Renovate](https://docs.renovatebot.com/) bumps the pinned CRS version in the `Containerfile` and opens a PR.
-2. A maintainer adds the label `Publish container image` to that PR
-   (the label must be created once in the repo settings by a maintainer).
-3. When the PR is merged, the auto-release workflow determines the CRS version from the `Containerfile` and creates a lightweight Git tag `v<CRS-VERSION>` (e.g. `v4.30.0`).
-   If an image build repeats on the same CRS version, it creates `v<CRS-VERSION>-<N>` instead (e.g. `v4.30.0-1`).
-4. It then triggers the [Build & Push workflow](.github/workflows/push.yml), publishing `ghcr.io/vshn/modsecurity-docker:<tag>` and `ghcr.io/vshn/modsecurity-docker:latest` (always the newest release).
+1. [Renovate](https://docs.renovatebot.com/) bumps the pinned CRS version in the `Containerfile` and opens a PR carrying the matching SemVer label (`bump:patch`, `bump:minor` or `bump:major`). Patch-level CRS updates are automerged, so they release on their own.
+2. When such a PR is merged, the [Autorelease workflow](.github/workflows/auto-release.yaml) creates the next Git tag `vX.Y.Z` — a counter of this repo's releases, independent of the CRS version — and triggers the [Build & Push workflow](.github/workflows/push.yml).
+3. To cut a patch release for any other PR, a maintainer adds the label `Publish Image` before merging.
 
-Tag names must stay unique per CRS version: the first build of a CRS version uses the bare `v<CRS-VERSION>` tag, and repeat builds append an incrementing suffix since the bare tag already exists.
+The labels `Publish Image`, `bump:minor` and `bump:major` must be created once in the repo settings by a maintainer (Renovate applies `bump:patch` itself). Do not add more than one bump label to a PR — the Autorelease workflow skips PRs with multiple bump labels.
 
-If GitHub Actions is unavailable, create and push the tag manually. Tags must be lightweight (no `git tag -s -m ...`, which creates annotated tags some tooling treats differently). The one-liner extracts the CRS version from the first `FROM` line in the `Containerfile` and appends `-1` — `-1` and not `-0`, because the bare `v<CRS-VERSION>` tag may already exist and the suffix numbering starts at 1 to avoid clashing with it:
+Image tags published to `ghcr.io/vshn/modsecurity-docker`:
+
+- Every push to `master` publishes the pinned CRS version (e.g. `4.30.0`, read from the `Containerfile`) and `latest`.
+- Every release tag `vX.Y.Z` publishes `vX.Y.Z` and `latest`.
+- Pull requests publish `pr-<number>`.
+
+If GitHub Actions is unavailable, create and push the next tag manually:
 
 ```sh
-tag="v$(grep -m1 '^FROM ' Containerfile | cut -d':' -f2 | cut -d'-' -f1)-1"; git tag "$tag"
-
-git push origin "$tag"
+git tag vX.Y.Z && git push origin vX.Y.Z
 ```
 
 ## Configuration
