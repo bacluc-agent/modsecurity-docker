@@ -35,20 +35,6 @@ curl -i http://localhost:8080/cookies/set/secret/random-value
 
 For all supported endpoints, visit [localhost:8080](http://localhost:8080/).
 
-### Release
-
-To publish a new release, simply create & push a new Git Tag.
-
-NOTE: Tags should follow the included CRS version. Use the build number to signify changes to the images with the same CRS number, e.g. `v4.3.0-0` -> `v4.3.0-1`.
-
-One-Liner to create a Tag:
-
-```sh
-tag="v$(grep '^FROM ' Containerfile| cut -d':' -f2 | cut -d'-' -f1)-0"; git tag -s "$tag" -m "$tag"
-```
-
-Don't forget to `git push --tags` afterwards!
-
 ## Configuration
 
 Most aspects can be configured using environment variables.
