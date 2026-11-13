@@ -137,3 +137,5 @@ This project includes code from the [ClamAV project][clamav] (Thank you!). See [
 
 [upstream]: https://github.com/coreruleset/modsecurity-crs-docker
 [clamav]: https://www.clamav.net/
+
+<!-- autorelease-verification-test: safe to remove -->
