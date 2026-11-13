@@ -7,7 +7,7 @@
       "fileMatch": ["^\\.github/workflows/.*\\.ya?ml$", "^Containerfile$"],
       "matchStrings": [
         "#\\s*renovate:\\s*datasource=(?<datasource>[^\\s]+) depName=(?<depName>[^\\s]+)\\n\\s*CRS_VERSION\\s*[=:]\\s*\"?(?<currentValue>[0-9][\\w.-]*)\"?",
-        "^FROM (?<depName>ghcr\\.io/coreruleset/modsecurity-crs):(?<currentValue>[^@\\s]+)(@(?<currentDigest>sha256:[a-f0-9]+))?"
+        "(?:^|\\r?\\n)FROM (?<depName>ghcr\\.io/coreruleset/modsecurity-crs):(?<currentValue>[^@\\s]+)(@(?<currentDigest>sha256:[a-f0-9]+))?"
       ],
       "datasourceTemplate": "docker"
     }
