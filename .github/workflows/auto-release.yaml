@@ -22,4 +22,3 @@ jobs:
         with:
           trigger: |
             Build & Push Container Image
-          patch-label: Publish Image

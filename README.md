@@ -35,28 +35,6 @@ curl -i http://localhost:8080/cookies/set/secret/random-value
 
 For all supported endpoints, visit [localhost:8080](http://localhost:8080/).
 
-### Release
-
-Releases are automated and triggered by PR labels via [projectsyn/pr-label-tag-action](https://github.com/ProjectSyn/pr-label-tag-action):
-
-1. [Renovate](https://docs.renovatebot.com/) bumps the pinned CRS version in the `Containerfile` and opens a PR carrying the matching SemVer label (`bump:patch`, `bump:minor` or `bump:major`). Patch-level CRS updates are automerged, so they release on their own.
-2. When such a PR is merged, the [Autorelease workflow](.github/workflows/auto-release.yaml) creates the next Git tag `vX.Y.Z` — a counter of this repo's releases, independent of the CRS version — and triggers the [Build & Push workflow](.github/workflows/push.yml).
-3. To cut a patch release for any other PR, a maintainer adds the label `Publish Image` before merging.
-
-The labels `Publish Image`, `bump:minor` and `bump:major` must be created once in the repo settings by a maintainer (Renovate applies `bump:patch` itself). Do not add more than one bump label to a PR — the Autorelease workflow skips PRs with multiple bump labels.
-
-Image tags published to `ghcr.io/vshn/modsecurity-docker`:
-
-- Every push to `master` publishes the pinned CRS version (e.g. `4.30.0`, read from the `Containerfile`) and `latest`.
-- Every release tag `vX.Y.Z` publishes `vX.Y.Z` and `latest`.
-- Pull requests publish `pr-<number>`.
-
-If GitHub Actions is unavailable, create and push the next tag manually:
-
-```sh
-git tag vX.Y.Z && git push origin vX.Y.Z
-```
-
 ## Configuration
 
 Most aspects can be configured using environment variables.
