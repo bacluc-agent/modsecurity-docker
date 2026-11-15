@@ -39,6 +39,7 @@ jobs:
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6
         with:
           images: "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
+          flavor: latest=false
           tags: |
             type=ref,event=branch
             type=ref,event=tag
@@ -51,6 +52,6 @@ jobs:
         with:
           context: .
           file: ./Containerfile
-          push: true
+          push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
