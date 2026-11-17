@@ -1,6 +1,8 @@
 name: Autorelease
 on:
   pull_request:
+    branches:
+      - master
     types:
       - synchronize
       - labeled

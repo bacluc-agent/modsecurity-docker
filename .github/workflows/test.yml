@@ -17,6 +17,124 @@ jobs:
       - name: Verify
         run: |
           [ $(docker inspect apache --format='{{.State.Running}}') = 'true' ]
+      - name: Assert release-tag metadata safety
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          workflow = Path(".github/workflows/push.yml").read_text()
+          version = re.search(r"^  CRS_VERSION: (\S+)$", workflow, re.MULTILINE).group(1)
+          tags_block = re.search(r"^          tags: \|\n((?:            .*\n)+)", workflow, re.MULTILINE).group(1)
+          tag_specs = [line.strip() for line in tags_block.splitlines()]
+          default_branch_expression = "$" + "{{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}"
+          version_expression = "$" + "{{ env.CRS_VERSION }}"
+          gated_version_tag = f"type=raw,value={version_expression},enable={default_branch_expression}"
+          ungated_version_tag = f"type=raw,value={version_expression}"
+          assert ungated_version_tag in tag_specs
+          assert gated_version_tag not in tag_specs
+          assert f"type=raw,value=latest,enable={default_branch_expression}" in tag_specs
+
+          def metadata_tags(ref):
+              tags = set()
+              for spec in tag_specs:
+                  if spec == "type=ref,event=tag" and ref.startswith("refs/tags/"):
+                      tags.add(ref.removeprefix("refs/tags/"))
+                  if not spec.startswith("type=raw,value="):
+                      continue
+                  value, _, enable = spec.removeprefix("type=raw,value=").partition(",enable=")
+                  value = value.replace(version_expression, version)
+                  if not enable or enable == default_branch_expression:
+                      if not enable or ref == "refs/heads/master":
+                          tags.add(value)
+              return tags
+
+          release_tags = metadata_tags("refs/tags/v0.0.1")
+          master_tags = metadata_tags("refs/heads/master")
+          assert {version, "latest"} <= master_tags
+          assert release_tags == {version, "v0.0.1"}
+          PY
+      - name: Validate Renovate extraction
+        run: |
+          set -o pipefail
+          npx --yes --package renovate renovate-config-validator
+          LOG_FORMAT=json npx --yes --package renovate renovate \
+            --platform=local --dry-run=extract 2>&1 | tee renovate-extraction.jsonl
+          python3 - <<'PY'
+          import json
+          import re
+          from pathlib import Path
+
+          extraction_events = [
+              json.loads(line)
+              for line in Path("renovate-extraction.jsonl").read_text().splitlines()
+              if line.startswith("{")
+              and json.loads(line).get("msg") == "Extracted dependencies"
+          ]
+          assert len(extraction_events) == 1
+          extraction = extraction_events[0]
+          package_name = "ghcr.io/coreruleset/modsecurity-crs"
+          regex_files = {
+              package["packageFile"]: [
+                  {
+                      key: dependency[key]
+                      for key in ("depName", "currentValue", "currentDigest")
+                      if key in dependency
+                  }
+                  for dependency in package.get("deps", [])
+                  if dependency.get("depName") == package_name
+              ]
+              for package in extraction["packageFiles"]["regex"]
+          }
+          workflow = Path(".github/workflows/push.yml").read_text()
+          workflow_version = re.search(
+              r"^  CRS_VERSION: (\S+)$", workflow, re.MULTILINE
+          ).group(1)
+          containerfile_match = re.search(
+              r"^FROM ghcr\.io/coreruleset/modsecurity-crs:(?P<version>[^@\s]+)@(?P<digest>sha256:[a-f0-9]+)$",
+              Path("Containerfile").read_text(),
+              re.MULTILINE,
+          )
+          expected_containerfile_dep = {
+              "depName": package_name,
+              "currentValue": containerfile_match.group("version"),
+              "currentDigest": containerfile_match.group("digest"),
+          }
+          assert regex_files == {
+              ".github/workflows/push.yml": [
+                  {"depName": package_name, "currentValue": workflow_version}
+              ],
+              "Containerfile": [expected_containerfile_dep, expected_containerfile_dep],
+          }
+          assert "currentDigest" not in regex_files[".github/workflows/push.yml"][0]
+          assert all(
+              dep["currentDigest"] == containerfile_match.group("digest")
+              for dep in regex_files["Containerfile"]
+          )
+          assert workflow_version == containerfile_match.group("version")
+
+          config = json.loads(Path("renovate.json").read_text())
+          digest_rule = next(
+              rule
+              for rule in config["packageRules"]
+              if rule.get("matchFileNames") == [".github/workflows/push.yml"]
+          )
+          assert digest_rule == {
+              "matchPackageNames": [package_name],
+              "matchFileNames": [".github/workflows/push.yml"],
+              "pinDigests": False,
+          }
+          assert any(
+              rule.get("groupName") == "modsecurity-crs"
+              and rule.get("matchPackageNames") == [package_name]
+              for rule in config["packageRules"]
+          )
+          assert all(
+              rule["matchPackageNames"] == [package_name]
+              for rule in config["packageRules"]
+              if "labels" in rule
+          )
+          PY
 
   mod_qos-test:
     name: mod_qos proxy test
