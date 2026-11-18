@@ -1,10 +1,15 @@
 {
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended"],
+  "reviewers": ["team:nunki"],
   "pinDigests": true,
   "customManagers": [
     {
       "customType": "regex",
-      "managerFilePatterns": ["/^\\.github\\/workflows\\/.*\\.ya?ml$/", "/^Containerfile$/"],
+      "managerFilePatterns": [
+        "/^\\.github/workflows/.*\\.ya?ml$/",
+        "/^Containerfile$/"
+      ],
       "matchStrings": [
         "#\\s*renovate:\\s*datasource=(?<datasource>[^\\s]+) depName=(?<depName>[^\\s]+)\\n\\s*CRS_VERSION\\s*[=:]\\s*\"?(?<currentValue>[0-9][\\w.-]*)\"?",
         "(?:^|\\r?\\n)FROM (?<depName>ghcr\\.io/coreruleset/modsecurity-crs):(?<currentValue>[^@\\s]+)(@(?<currentDigest>sha256:[a-f0-9]+))?"
@@ -28,15 +33,6 @@
       "groupName": "modsecurity-crs"
     },
     {
-      "matchUpdateTypes": ["patch", "digest"],
-      "automerge": true
-    },
-    {
-      "matchUpdateTypes": ["minor"],
-      "reviewers": ["team:nunki"],
-      "automerge": false
-    },
-    {
       "matchPackageNames": ["ghcr.io/coreruleset/modsecurity-crs"],
       "matchUpdateTypes": ["patch"],
       "labels": ["renovate", "dependency", "bump:patch"]
@@ -50,6 +46,11 @@
       "matchPackageNames": ["ghcr.io/coreruleset/modsecurity-crs"],
       "matchUpdateTypes": ["major"],
       "labels": ["renovate", "dependency", "bump:major"]
+    },
+    {
+      "matchPackageNames": ["ghcr.io/coreruleset/modsecurity-crs"],
+      "matchUpdateTypes": ["patch", "digest"],
+      "automerge": true
     }
   ]
 }
