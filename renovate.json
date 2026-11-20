@@ -1,6 +1,22 @@
 {
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended"],
+  "reviewers": ["team:nunki"],
   "pinDigests": true,
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/^\\.github/workflows/.*\\.ya?ml$/",
+        "/^Containerfile$/"
+      ],
+      "matchStrings": [
+        "#\\s*renovate:\\s*datasource=(?<datasource>[^\\s]+) depName=(?<depName>[^\\s]+)\\n\\s*CRS_VERSION\\s*[=:]\\s*\"?(?<currentValue>[0-9][\\w.-]*)\"?",
+        "(?:^|\\r?\\n)FROM (?<depName>ghcr\\.io/coreruleset/modsecurity-crs):(?<currentValue>[^@\\s]+)(@(?<currentDigest>sha256:[a-f0-9]+))?"
+      ],
+      "datasourceTemplate": "docker"
+    }
+  ],
   "packageRules": [
     {
       "matchDatasources": ["docker"],
@@ -8,13 +24,33 @@
       "versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)-(?<compatibility>[a-z\\-]+)-(?<build>\\d+)$"
     },
     {
-      "matchUpdateTypes": ["patch", "digest"],
-      "automerge": true
+      "matchPackageNames": ["ghcr.io/coreruleset/modsecurity-crs"],
+      "matchFileNames": [".github/workflows/push.yml"],
+      "pinDigests": false
     },
     {
+      "matchPackageNames": ["ghcr.io/coreruleset/modsecurity-crs"],
+      "groupName": "modsecurity-crs"
+    },
+    {
+      "matchPackageNames": ["ghcr.io/coreruleset/modsecurity-crs"],
+      "matchUpdateTypes": ["patch"],
+      "labels": ["renovate", "dependency", "bump:patch"]
+    },
+    {
+      "matchPackageNames": ["ghcr.io/coreruleset/modsecurity-crs"],
       "matchUpdateTypes": ["minor"],
-      "reviewers": ["team:nunki"],
-      "automerge": false
+      "labels": ["renovate", "dependency", "bump:minor"]
+    },
+    {
+      "matchPackageNames": ["ghcr.io/coreruleset/modsecurity-crs"],
+      "matchUpdateTypes": ["major"],
+      "labels": ["renovate", "dependency", "bump:major"]
+    },
+    {
+      "matchPackageNames": ["ghcr.io/coreruleset/modsecurity-crs"],
+      "matchUpdateTypes": ["patch", "digest"],
+      "automerge": true
     }
   ]
 }
