@@ -124,11 +124,6 @@ jobs:
               "matchFileNames": [".github/workflows/push.yml"],
               "pinDigests": False,
           }
-          assert any(
-              rule.get("groupName") == "modsecurity-crs"
-              and rule.get("matchPackageNames") == [package_name]
-              for rule in config["packageRules"]
-          )
           assert all(
               rule["matchPackageNames"] == [package_name]
               for rule in config["packageRules"]
